@@ -1,0 +1,11 @@
+[
+  {
+    "name": "Оформление пустой корзины подсказывает следующий шаг",
+    "steps": [
+      {
+        "send": { "callback": "checkout:start" },
+        "expect": [{ "method": "editMessageText", "payload": { "text": "Корзина пуста — сначала добавьте товар." } }]
+      }
+    ]
+  }
+]
