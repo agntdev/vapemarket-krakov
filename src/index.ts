@@ -8,9 +8,8 @@ async function main() {
     process.exit(1);
   }
   const bot = await buildBot(token);
-  // Publish the "/" command list to Telegram (discoverability). A button-first
-  // bot exposes only /start + /help; everything else is reached via menu buttons.
-  await setDefaultCommands(bot);
+  // /admin is the documented owner shortcut; customer actions remain button-first.
+  await setDefaultCommands(bot, [{ command: "admin", description: "Панель управления" }]);
   bot.start();
 }
 

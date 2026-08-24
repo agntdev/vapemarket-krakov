@@ -2,12 +2,17 @@ import type { Ctx } from "./bot.js";
 
 export type Product = { id: string; photo?: string; name: string; description: string; price: number; category: string; stock: number; visibility: boolean; excise_mark: string };
 export type CartLine = { productId: string; quantity: number };
-export type ShopUser = { telegram_id: number; name: string; registration_date: number; orders_count: number; total_spent: number; referral_link: string; invited_users: number[]; discount: number };
+export type ShopUser = { telegram_id: number; name: string; username?: string; registration_date: number; orders_count: number; total_spent: number; referral_link: string; invited_users: number[]; discount: number; age_confirmed?: boolean };
 export type Order = { id: string; client: number; delivery_method: "pickup" | "delivery"; payment_method: "cash"; items: CartLine[]; total: number; status: "new" | "accepted" | "ready" | "completed" | "cancelled"; timestamp: number; comment: string; address?: string };
 export type Referral = { inviter: number; invited: number; timestamp: number; bonus: number };
 
 type StoreCtx = Ctx & { env?: { CHAT_DO?: { idFromName(name: string): unknown; get(id: unknown): { fetch(input: string, init?: { method?: string; body?: string }): Promise<Response> } } } };
-export const now = () => Date.now();
+let clock = () => Date.now();
+
+/** The single clock seam for timestamps. Tests may replace it without faking data. */
+export function now(): number { return clock(); }
+
+export function setClockForTest(next: () => number): void { clock = next; }
 
 async function request<T>(ctx: StoreCtx, path: string, body?: unknown): Promise<T | undefined> {
   const ns = ctx.env?.CHAT_DO;
@@ -27,11 +32,16 @@ export async function registerUser(ctx: Ctx): Promise<ShopUser | undefined> {
   if (!ctx.from) return undefined;
   const key = `user:${ctx.from.id}`;
   let user = await get<ShopUser>(ctx, key);
+  const name = [ctx.from.first_name, ctx.from.last_name].filter(Boolean).join(" ") || "Покупатель";
   if (!user) {
-    const name = [ctx.from.first_name, ctx.from.last_name].filter(Boolean).join(" ") || "Покупатель";
-    user = { telegram_id: ctx.from.id, name, registration_date: now(), orders_count: 0, total_spent: 0, referral_link: `ref_${ctx.from.id.toString(36)}`, invited_users: [], discount: 0 };
-    await put(ctx, key, user);
+    user = { telegram_id: ctx.from.id, name, username: ctx.from.username, registration_date: now(), orders_count: 0, total_spent: 0, referral_link: `ref_${ctx.from.id.toString(36)}`, invited_users: [], discount: 0 };
+  } else {
+    // Telegram names and usernames can change; retain the registration date and
+    // commerce history while keeping the contact record current.
+    user.name = name;
+    user.username = ctx.from.username;
   }
+  await put(ctx, key, user);
   return user;
 }
 
