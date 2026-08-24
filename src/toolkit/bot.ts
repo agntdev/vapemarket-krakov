@@ -1,5 +1,6 @@
 import {
   Bot,
+  GrammyError,
   session,
   type Context,
   type SessionFlavor,
@@ -46,6 +47,23 @@ export function createBot<S extends object>(
   opts: CreateBotOptions<S>,
 ): Bot<BotContext<S>> {
   const bot = new Bot<BotContext<S>>(token);
+  // Telegram rejects a second tap that renders the already visible screen and
+  // rejects callback answers after its short acknowledgement window. Neither
+  // condition is an application failure, so keep them out of the error boundary.
+  bot.api.config.use(async (prev, method, payload, signal) => {
+    try {
+      return await prev(method, payload, signal);
+    } catch (error) {
+      const description = error instanceof GrammyError ? error.description : String(error);
+      if (
+        (method === "editMessageText" && description.includes("message is not modified")) ||
+        (method === "answerCallbackQuery" && (description.includes("query is too old") || description.includes("query ID is invalid")))
+      ) {
+        return true as Awaited<ReturnType<typeof prev>>;
+      }
+      throw error;
+    }
+  });
   bot.use(
     session<S, BotContext<S>>({
       initial: opts.initial,

@@ -1,7 +1,7 @@
 import { Composer } from "grammy";
 import type { Ctx } from "../bot.js";
 import { adminChatId, inlineButton, inlineKeyboard } from "../toolkit/index.js";
-import { cart, get, nextId, now, saveCart, saveOrder, saveProduct, type Order, type Product } from "../shop.js";
+import { cart, get, nextId, now, put, saveCart, saveOrder, saveProduct, type Order, type Product, type ShopUser } from "../shop.js";
 type FlowCtx = Ctx & { session: { checkout?: "address"; delivery?: "pickup" | "delivery" } };
 const composer = new Composer<Ctx>();
 async function chooseDelivery(ctx: Ctx) { await ctx.editMessageText("Выберите способ получения.", { reply_markup: inlineKeyboard([[inlineButton("Самовывоз в Кракове", "checkout:pickup")], [inlineButton("Доставка", "checkout:delivery")], [inlineButton("В корзину", "cart:view")]]) }); }
@@ -11,9 +11,12 @@ composer.callbackQuery("checkout:delivery", async (ctx) => { await ctx.answerCal
 composer.callbackQuery("checkout:back-delivery", async (ctx) => { await ctx.answerCallbackQuery(); const c = ctx as FlowCtx; c.session.checkout = undefined; c.session.delivery = undefined; delete (c.session as { address?: string }).address; await chooseDelivery(ctx); });
 composer.on("message:text", async (ctx, next) => { const c = ctx as FlowCtx; if (c.session.checkout !== "address") return next(); const address = ctx.message.text.trim(); if (address.length < 8 || !/\d/.test(address)) { await ctx.reply("Укажите улицу и номер дома, например: ul. Długa 10."); return; } c.session.checkout = undefined; (c.session as { address?: string }).address = address; await ctx.reply("Оплата — наличными при получении.", { reply_markup: inlineKeyboard([[inlineButton("Подтвердить заказ", "checkout:confirm")], [inlineButton("В корзину", "cart:view")]]) }); });
 composer.callbackQuery("checkout:confirm", async (ctx) => { await ctx.answerCallbackQuery(); const c = ctx as FlowCtx; const lines = await cart(ctx); const products = await Promise.all(lines.map((l) => get<Product>(ctx, `product:${l.productId}`))); if (!lines.length || products.some((p, i) => !p || p.stock < lines[i].quantity || !p.visibility)) { await ctx.editMessageText("Один из товаров закончился. Проверьте корзину.", { reply_markup: inlineKeyboard([[inlineButton("Открыть корзину", "cart:view")]]) }); return; }
+  if (!c.session.delivery) { await chooseDelivery(ctx); return; }
   const id = await nextId(ctx, "order"); if (!id || !ctx.from) { await ctx.editMessageText("Оформление временно недоступно. Попробуйте позже."); return; }
   const total = products.reduce((sum, p, i) => sum + (p as Product).price * lines[i].quantity, 0); for (let i = 0; i < products.length; i++) { const p = products[i] as Product; p.stock -= lines[i].quantity; await saveProduct(ctx, p); }
-  const order: Order = { id, client: ctx.from.id, delivery_method: c.session.delivery ?? "pickup", payment_method: "cash", items: lines, total, status: "new", timestamp: now(), comment: "", address: (c.session as { address?: string }).address, history: [{ timestamp: now(), kind: "status", text: "Заказ создан" }] }; await saveOrder(ctx, order); await saveCart(ctx, []); c.session.checkout = undefined;
+  const order: Order = { id, client: ctx.from.id, delivery_method: c.session.delivery, payment_method: "cash", items: lines, total, status: "new", timestamp: now(), comment: "", address: (c.session as { address?: string }).address, history: [{ timestamp: now(), kind: "status", text: "Заказ создан" }] }; await saveOrder(ctx, order); await saveCart(ctx, []);
+  const user = await get<ShopUser>(ctx, `user:${ctx.from.id}`); if (user) { user.orders_count += 1; user.total_spent += total; await put(ctx, `user:${user.telegram_id}`, user); }
+  c.session.checkout = undefined; c.session.delivery = undefined; delete (c.session as { address?: string }).address;
   const admin = adminChatId(ctx as { env?: Record<string, unknown> | null }); if (admin) { try { await ctx.api.sendMessage(admin, `Новый заказ ${id}: ${total.toFixed(2)} PLN, наличными.`); } catch { /* owner may have blocked the bot */ } }
   await ctx.editMessageText(`Заказ принят. Оплата наличными при получении.\nСумма: ${total.toFixed(2)} PLN.`, { reply_markup: inlineKeyboard([[inlineButton("В меню", "menu:main")]]) });
 });
