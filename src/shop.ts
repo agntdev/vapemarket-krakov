@@ -6,6 +6,15 @@ export type ShopUser = { telegram_id: number; name: string; username?: string; r
 export type Order = { id: string; client: number; delivery_method: "pickup" | "delivery"; payment_method: "cash"; items: CartLine[]; total: number; status: "new" | "accepted" | "ready" | "completed" | "cancelled"; timestamp: number; comment: string; address?: string };
 export type Referral = { inviter: number; invited: number; timestamp: number; bonus: number };
 
+/** Categories deliberately use stable ASCII callback values while their labels stay Russian. */
+export const CATEGORIES = ["Жидкости", "Картриджи", "Pod-системы", "Одноразки"] as const;
+export const UNCATEGORIZED = "Uncategorized";
+export type Category = (typeof CATEGORIES)[number] | typeof UNCATEGORIZED;
+
+export function categoryOf(value: string | undefined): Category {
+  return CATEGORIES.includes(value as (typeof CATEGORIES)[number]) ? value as Category : UNCATEGORIZED;
+}
+
 type StoreCtx = Ctx & { env?: { CHAT_DO?: { idFromName(name: string): unknown; get(id: unknown): { fetch(input: string, init?: { method?: string; body?: string }): Promise<Response> } } } };
 let clock = () => Date.now();
 
@@ -42,15 +51,30 @@ export async function registerUser(ctx: Ctx): Promise<ShopUser | undefined> {
     user.username = ctx.from.username;
   }
   await put(ctx, key, user);
+  const ids = (await get<number[]>(ctx, "users:index")) ?? [];
+  if (!ids.includes(user.telegram_id)) await put(ctx, "users:index", [...ids, user.telegram_id]);
   return user;
 }
 
-export async function listedProducts(ctx: Ctx): Promise<Product[]> {
+/** Reads the explicit product index; old records are retained and normalized in place. */
+export async function allProducts(ctx: Ctx): Promise<Product[]> {
   const ids = (await get<string[]>(ctx, "products:index")) ?? [];
   const products = await Promise.all(ids.map((id) => get<Product>(ctx, `product:${id}`)));
-  return products.filter((p): p is Product => Boolean(p && p.visibility));
+  const valid = products.filter((p): p is Product => Boolean(p));
+  for (const product of valid) {
+    const category = categoryOf(product.category);
+    if (product.category !== category) {
+      product.category = category;
+      await put(ctx, `product:${product.id}`, product);
+    }
+  }
+  return valid;
+}
+export async function listedProducts(ctx: Ctx, category?: Category): Promise<Product[]> {
+  return (await allProducts(ctx)).filter((p) => p.visibility && (!category || categoryOf(p.category) === category));
 }
 export async function saveProduct(ctx: Ctx, product: Product): Promise<void> {
+  product.category = categoryOf(product.category);
   const ids = (await get<string[]>(ctx, "products:index")) ?? [];
   if (!ids.includes(product.id)) await put(ctx, "products:index", [...ids, product.id]);
   await put(ctx, `product:${product.id}`, product);
