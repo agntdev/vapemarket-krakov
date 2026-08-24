@@ -2,8 +2,9 @@ import type { Ctx } from "./bot.js";
 
 export type Product = { id: string; photo?: string; name: string; description: string; price: number; category: string; stock: number; visibility: boolean; excise_mark: string };
 export type CartLine = { productId: string; quantity: number };
-export type ShopUser = { telegram_id: number; name: string; username?: string; registration_date: number; orders_count: number; total_spent: number; referral_link: string; invited_users: number[]; discount: number; age_confirmed?: boolean };
-export type Order = { id: string; client: number; delivery_method: "pickup" | "delivery"; payment_method: "cash"; items: CartLine[]; total: number; status: "new" | "accepted" | "ready" | "completed" | "cancelled"; timestamp: number; comment: string; address?: string };
+export type ShopUser = { telegram_id: number; name: string; username?: string; registration_date: number; orders_count: number; total_spent: number; referral_link: string; invited_users: number[]; discount: number; age_confirmed?: boolean; role?: "customer" | "admin" };
+export type OrderHistoryItem = { timestamp: number; kind: "status" | "message"; text: string };
+export type Order = { id: string; client: number; delivery_method: "pickup" | "delivery"; payment_method: "cash"; items: CartLine[]; total: number; status: "new" | "accepted" | "ready" | "completed" | "cancelled"; timestamp: number; comment: string; address?: string; history?: OrderHistoryItem[] };
 export type Referral = { inviter: number; invited: number; timestamp: number; bonus: number };
 
 /** Categories deliberately use stable ASCII callback values while their labels stay Russian. */
@@ -43,7 +44,7 @@ export async function registerUser(ctx: Ctx): Promise<ShopUser | undefined> {
   let user = await get<ShopUser>(ctx, key);
   const name = [ctx.from.first_name, ctx.from.last_name].filter(Boolean).join(" ") || "Покупатель";
   if (!user) {
-    user = { telegram_id: ctx.from.id, name, username: ctx.from.username, registration_date: now(), orders_count: 0, total_spent: 0, referral_link: `ref_${ctx.from.id.toString(36)}`, invited_users: [], discount: 0 };
+    user = { telegram_id: ctx.from.id, name, username: ctx.from.username, registration_date: now(), orders_count: 0, total_spent: 0, referral_link: `ref_${ctx.from.id.toString(36)}`, invited_users: [], discount: 0, role: "customer" };
   } else {
     // Telegram names and usernames can change; retain the registration date and
     // commerce history while keeping the contact record current.
