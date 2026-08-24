@@ -1,6 +1,6 @@
 [
   {
-    "name": "/start replies with the welcome + main menu",
+    "name": "/start starts age onboarding for a new user",
     "steps": [
       {
         "send": { "text": "/start" },
@@ -10,6 +10,33 @@
             "payload": { "text": "Подтвердите, что вам уже исполнилось 18 лет." }
           }
         ]
+      }
+    ]
+  }
+  ,
+  {
+    "name": "/start after age confirmation opens the menu for an existing user",
+    "steps": [
+      {
+        "send": { "text": "/start" },
+        "expect": [{ "method": "sendMessage", "payload": { "text": "Подтвердите, что вам уже исполнилось 18 лет." } }]
+      },
+      {
+        "send": { "callback": "age:yes" },
+        "expect": [{ "method": "editMessageText", "payload": { "text": "VapeShop PL — легальные вейп-товары в Кракове.\nВыберите раздел." } }]
+      },
+      {
+        "send": { "text": "/start" },
+        "expect": [{ "method": "sendMessage", "payload": { "text": "VapeShop PL — легальные вейп-товары в Кракове.\nВыберите раздел." } }]
+      }
+    ]
+  },
+  {
+    "name": "/start accepts a referral deep link",
+    "steps": [
+      {
+        "send": { "text": "/start ref_2", "chatId": 3, "userId": 3 },
+        "expect": [{ "method": "sendMessage", "payload": { "text": "Подтвердите, что вам уже исполнилось 18 лет." } }]
       }
     ]
   }

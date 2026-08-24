@@ -14,6 +14,7 @@ import { webhookCallback, Composer, type Bot } from "grammy";
 import { buildBot, type Ctx } from "./bot.js";
 import { handlers } from "./handlers.generated.js";
 import { createDurableSessionStorage, type WorkerEnv } from "./toolkit/session/durable.js";
+import { setDefaultCommands } from "./toolkit/index.js";
 
 export { ChatDO } from "./toolkit/session/durable.js";
 
@@ -49,6 +50,10 @@ function getBot(env: WorkerEnv): Promise<Bot<Ctx>> {
         telemetryReporterOptions: { flushOnRecord: true, startTimer: false },
       });
       await bot.init();
+      // Webhook deployments never execute src/index.ts, so publish the small
+      // command menu here as well. This is best-effort and does not delay update
+      // processing if Telegram temporarily rejects the call.
+      await setDefaultCommands(bot, [{ command: "admin", description: "Панель управления" }]);
       return bot;
     })();
     botPromise.catch(() => {
