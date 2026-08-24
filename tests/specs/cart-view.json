@@ -1,0 +1,20 @@
+[
+  {
+    "name": "Корзина",
+    "steps": [
+      {
+        "expect": [
+          {
+            "method": "sendMessage",
+            "payload": {
+              "text": "Просмотр и редактирование корзины"
+            }
+          }
+        ],
+        "send": {
+          "callback": "cart:view"
+        }
+      }
+    ]
+  }
+]
