@@ -1,19 +1,38 @@
 [
   {
-    "name": "Каталог",
+    "name": "Каталог открывает четыре категории",
     "steps": [
       {
         "expect": [
           {
             "method": "editMessageText",
             "payload": {
-              "text": "Каталог пока пуст. Попробуйте позже."
+              "text": "Выберите категорию.",
+              "reply_markup": {
+                "inline_keyboard": [
+                  [{ "text": "Жидкости", "callback_data": "catalog:category:liquids:0" }],
+                  [{ "text": "Картриджи", "callback_data": "catalog:category:cartridges:0" }],
+                  [{ "text": "Pod-системы", "callback_data": "catalog:category:pods:0" }],
+                  [{ "text": "Одноразки", "callback_data": "catalog:category:disposables:0" }],
+                  [{ "text": "В меню", "callback_data": "menu:main" }]
+                ]
+              }
             }
           }
         ],
         "send": {
           "callback": "catalog:main"
         }
+      }
+    ]
+  }
+  ,
+  {
+    "name": "Пустая категория показывает понятное состояние",
+    "steps": [
+      {
+        "send": { "callback": "catalog:category:liquids:0" },
+        "expect": [{ "method": "editMessageText", "payload": { "text": "В категории «Жидкости» ничего не найдено." } }]
       }
     ]
   }
