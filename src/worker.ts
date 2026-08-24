@@ -53,7 +53,9 @@ function getBot(env: WorkerEnv): Promise<Bot<Ctx>> {
       // Webhook deployments never execute src/index.ts, so publish the small
       // command menu here as well. This is best-effort and does not delay update
       // processing if Telegram temporarily rejects the call.
-      await setDefaultCommands(bot, [{ command: "admin", description: "Панель управления" }]);
+      // Publishing commands is discoverability only. Waiting for it held up the
+      // first webhook and caused Telegram callback queries to expire.
+      void setDefaultCommands(bot);
       return bot;
     })();
     botPromise.catch(() => {

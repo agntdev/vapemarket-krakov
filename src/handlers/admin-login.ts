@@ -1,6 +1,6 @@
 import { Composer } from "grammy";
 import type { Ctx } from "../bot.js";
-import { inlineButton, inlineKeyboard, isOwner, registerMainMenuItem, requireOwner } from "../toolkit/index.js";
+import { adminChatId, inlineButton, inlineKeyboard, isOwner, registerMainMenuItem } from "../toolkit/index.js";
 import { get, type ShopUser } from "../shop.js";
 
 registerMainMenuItem({ label: "Админ-панель", data: "admin:login", order: 90 });
@@ -15,8 +15,11 @@ export async function hasAdminAccess(ctx: Ctx): Promise<boolean> {
 
 export async function requireAdmin(ctx: Ctx): Promise<boolean> {
   if (await hasAdminAccess(ctx)) return true;
-  // Keep the unset-owner configuration message precise and consistent.
-  if (!isOwner(ctx)) return requireOwner(ctx);
+  // The callback has already been acknowledged by callers. Calling
+  // requireOwner here used to answer it a second time, causing noisy 400s.
+  await ctx.reply(adminChatId(ctx as { env?: Record<string, unknown> | null }) === undefined
+    ? "Доступ владельца ещё не настроен."
+    : "Доступ к админ-панели ограничен.");
   return false;
 }
 
