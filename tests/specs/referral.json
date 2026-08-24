@@ -1,0 +1,11 @@
+[
+  {
+    "name": "Реферальная программа открывается кнопкой",
+    "steps": [
+      {
+        "send": { "callback": "referral:view" },
+        "expect": [{ "method": "editMessageText", "payload": { "text": "Пригласите друга и получите бонус после подтверждения администратором.\nВаша ссылка: https://t.me/test_bot?start=ref_1\nПриглашено: 0.\nБонус: 0.00 PLN." } }]
+      }
+    ]
+  }
+]

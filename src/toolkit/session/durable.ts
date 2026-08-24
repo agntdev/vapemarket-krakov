@@ -144,6 +144,29 @@ export class ChatDO {
       }
     }
 
+    // Persistent domain records for Worker bots. A dedicated global object is
+    // addressed explicitly by handlers; it never scans a keyspace.
+    if (url.pathname === "/shop/get" && request.method === "GET") {
+      const key = url.searchParams.get("key");
+      if (!key) return new Response("bad request", { status: 400 });
+      const value = await this.state.storage.get<unknown>(`shop:${key}`);
+      return value === undefined ? new Response(null, { status: 204 }) : Response.json(value);
+    }
+    if (url.pathname === "/shop/put" && request.method === "POST") {
+      const body = (await request.json()) as { key?: unknown; value?: unknown };
+      if (typeof body.key !== "string") return new Response("bad request", { status: 400 });
+      await this.state.storage.put(`shop:${body.key}`, body.value);
+      return new Response(null, { status: 204 });
+    }
+    if (url.pathname === "/shop/next" && request.method === "POST") {
+      const body = (await request.json()) as { kind?: unknown };
+      if (typeof body.kind !== "string") return new Response("bad request", { status: 400 });
+      const key = `shop:seq:${body.kind}`;
+      const value = ((await this.state.storage.get<number>(key)) ?? 0) + 1;
+      await this.state.storage.put(key, value);
+      return Response.json(`${body.kind}-${value}`);
+    }
+
     // Schedule a reminder + (re)arm the alarm to the earliest due one.
     if (url.pathname === "/remind" && request.method === "POST") {
       const rem = (await request.json()) as Reminder;

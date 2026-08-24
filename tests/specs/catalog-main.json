@@ -5,9 +5,9 @@
       {
         "expect": [
           {
-            "method": "sendMessage",
+            "method": "editMessageText",
             "payload": {
-              "text": "Просмотр категорий и товаров"
+              "text": "Каталог пока пуст. Попробуйте позже."
             }
           }
         ],

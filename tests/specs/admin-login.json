@@ -7,7 +7,7 @@
           {
             "method": "sendMessage",
             "payload": {
-              "text": "Вход в админ-панель по Telegram ID"
+              "text": "Owner access isn't set up yet."
             }
           }
         ],

@@ -7,7 +7,7 @@
           {
             "method": "sendMessage",
             "payload": {
-              "text": "Альтернативный вход в админ-панель"
+              "text": "Owner access isn't set up yet."
             }
           }
         ],
