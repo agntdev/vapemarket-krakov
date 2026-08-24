@@ -35,5 +35,19 @@
         "expect": [{ "method": "editMessageText", "payload": { "text": "В категории «Жидкости» ничего не найдено." } }]
       }
     ]
+  },
+  {
+    "name": "Назад отменяет поиск и возвращает к категории",
+    "steps": [
+      {
+        "send": { "callback": "catalog:cancel-search:liquids" },
+        "expect": [
+          {
+            "method": "editMessageText",
+            "payload": { "text": "В категории «Жидкости» ничего не найдено." }
+          }
+        ]
+      }
+    ]
   }
 ]
